@@ -12,3 +12,5 @@ Python 3
 
 ### How to play
 You can't play this game.
+
+![](https://github.com/ognick/minesweeper/blob/main/demo.gif)
