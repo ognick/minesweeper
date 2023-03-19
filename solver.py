@@ -1,16 +1,6 @@
 from game import Field, Game
 
 
-def traverse_field(field: Field, func):
-    result = False
-    width, height = field.get_size()
-    for y in range(height):
-        for x in range(width):
-            num = field.get(x, y)
-            result = result or func(x, y, num)
-    return result
-
-
 def get_unknown_neighbors(field: Field, x: int, y: int) -> list[tuple[int, int]]:
     return [(x, y) for (x, y, num) in field.get_neighbors(x, y) if num == Field.UNKNOWN]
 
@@ -21,12 +11,6 @@ def get_marked_neighbors(field: Field, x: int, y: int) -> list[tuple[int, int]]:
 
 def get_open_neighbors(field: Field, x: int, y: int) -> list[tuple[int, int, int]]:
     return [(x, y, num) for (x, y, num) in field.get_neighbors(x, y) if num > 0]
-
-
-def is_unknown(x, y, num) -> bool:
-    if num == Field.UNKNOWN:
-        return True
-    return False
 
 
 def is_valid_layout(places: int, mines: int, num: int) -> bool:
@@ -81,7 +65,7 @@ class Solver:
     def clone_field(self) -> Field:
         width, height = self.game.field.get_size()
         clone = Field(height, width)
-        traverse_field(self.game.field, clone.set)
+        self.game.field.traverse(clone.set)
         return clone
 
     def mark_if_num_eq_unknowns(self, x, y, num) -> bool:
@@ -196,40 +180,30 @@ class Solver:
 
     def solve(self):
         alive = True
-        has_any_unknown = True
-        i = 0
-        while alive and has_any_unknown and i < 1000:
+        while alive and not self.game.check_done():
             self.game.field.print()
-
-            i += 1
             alive = False
-            if traverse_field(self.game.field, self.mark_if_num_eq_unknowns):
-                alive = True
-                print(f'{i} mark')
-                continue
-                # self.game.field.print()
 
-            if traverse_field(self.game.field, self.open_if_num_eq_markers):
+            if self.game.field.traverse(self.mark_if_num_eq_unknowns):
                 alive = True
-                print(f'{i} open')
-                continue
-                # self.game.field.print()
-
-            if traverse_field(self.game.field, self.reduce_markers):
-                alive = True
-                print(f'{i} reduce markers')
-                continue
-                # self.game.field.print()
-
-            if traverse_field(self.game.field, self.reduce_opens):
-                alive = True
-                print(f'{i} reduce opens')
                 continue
 
-            has_any_unknown = traverse_field(self.game.field, is_unknown)
+            if self.game.field.traverse(self.open_if_num_eq_markers):
+                alive = True
+                continue
+
+            if self.game.field.traverse(self.reduce_markers):
+                alive = True
+                continue
+
+            if self.game.field.traverse(self.reduce_opens):
+                alive = True
+                continue
 
         self.game.field.print()
-        if has_any_unknown:
-            print('FUCK!')
-        else:
+        if self.game.check_done():
             print('SOLVED!')
+            exit(0)
+
+        print('F@CK(')
+        exit(1)

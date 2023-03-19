@@ -38,7 +38,7 @@ class Field(object):
 
     def __init__(self, height: int, width: int):
         self.num_mines = None
-        self.unknown_fields = width * height
+        self.num_unknowns = width * height
         self._f = [[Field.UNKNOWN for _ in range(width)] for _ in range(height)]
 
     def generate(self, num_mines: int) -> tuple[int, int]:
@@ -63,6 +63,14 @@ class Field(object):
                     self._f[y][x] = self.get_mines_count_around(x, y)
 
         return init_x, init_y
+
+    def traverse(self, func) -> bool:
+        result = False
+        for y, line in enumerate(self._f):
+            for x, num in enumerate(line):
+                if func(x, y, num):
+                    result = True
+        return result
 
     @lru_cache
     def can_get(self, x: int, y: int) -> bool:
@@ -126,8 +134,13 @@ class Game(object):
     def __init__(self, height: int, width: int, num_mines: int):
         self.__secret_field = secret_field = Field(height, width)
         init_x, init_y = secret_field.generate(num_mines)
+        self.num_mines = num_mines
+        self.num_unknowns = (height * width) - num_mines
         self.field = Field(height, width)
         self.open(init_x, init_y)
+
+    def check_done(self) -> bool:
+        return self.num_mines == 0 and self.num_unknowns == 0
 
     def __rec_open(self, x, y) -> int:
         count = 0
@@ -147,12 +160,18 @@ class Game(object):
         return count
 
     def mark(self, x, y):
-        self.field.set(x, y, Field.MARKER)
-
-    def open(self, x, y):
-        if self.field.get(x, y) == Field.BOMB:
+        if self.__secret_field.get(x, y) != Field.BOMB:
             self.field.set(x, y, Field.BOOM)
             self.field.print()
             exit(1)
 
-        self.__rec_open(x, y)
+        self.field.set(x, y, Field.MARKER)
+        self.num_mines -= 1
+
+    def open(self, x, y):
+        if self.__secret_field.get(x, y) == Field.BOMB:
+            self.field.set(x, y, Field.BOOM)
+            self.field.print()
+            exit(1)
+
+        self.num_unknowns -= self.__rec_open(x, y)
