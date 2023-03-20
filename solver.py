@@ -68,7 +68,7 @@ class Solver:
         self.game.field.traverse(clone.set)
         return clone
 
-    def mark_if_num_eq_unknowns(self, x, y, num) -> bool:
+    def mark_if_number_equals_unknowns(self, x, y, num) -> bool:
         if num < 1:
             return False
 
@@ -84,7 +84,7 @@ class Solver:
             return True
         return False
 
-    def open_if_num_eq_markers(self, x, y, num) -> bool:
+    def open_if_number_equals_markers(self, x, y, num) -> bool:
         if num < 1:
             return False
 
@@ -97,7 +97,7 @@ class Solver:
             return True
         return False
 
-    def reduce_opens(self, x, y, num) -> bool:
+    def open_if_contacted_with_enough_markers(self, x, y, num) -> bool:
         if num < 1:
             return False
 
@@ -141,7 +141,7 @@ class Solver:
 
         return False
 
-    def reduce_markers(self, x, y, num) -> bool:
+    def mark_if_there_is_only_one_option(self, x, y, num) -> bool:
         result = False
         if num < 1:
             return result
@@ -181,23 +181,18 @@ class Solver:
     def solve(self):
         alive = True
         while alive and not self.game.check_done():
-            self.game.field.print()
             alive = False
-
-            if self.game.field.traverse(self.mark_if_num_eq_unknowns):
-                alive = True
-                continue
-
-            if self.game.field.traverse(self.open_if_num_eq_markers):
-                alive = True
-                continue
-
-            if self.game.field.traverse(self.reduce_markers):
-                alive = True
-                continue
-
-            if self.game.field.traverse(self.reduce_opens):
-                alive = True
+            methods =[
+                self.mark_if_number_equals_unknowns,
+                self.open_if_number_equals_markers,
+                self.mark_if_there_is_only_one_option,
+                self.open_if_contacted_with_enough_markers
+            ]
+            for func in methods:
+                if self.game.field.traverse(func):
+                    alive = True
+                    break
+            if alive:
                 continue
 
         self.game.field.print()
