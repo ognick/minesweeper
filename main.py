@@ -5,7 +5,7 @@ from solver import Solver
 
 seed = random.randint(0, 1000)
 print(f'Seed: {seed}')
-random.seed(seed)
+# random.seed(442)
 
 Solver(Game(16, 30, 99)).solve()
 

@@ -68,7 +68,7 @@ class Solver:
         self.game.field.traverse(clone.set)
         return clone
 
-    def mark_if_number_equals_unknowns(self, x, y, num) -> bool:
+    def mark_if_number_equals_unknowns(self, x, y, num, _) -> bool:
         if num < 1:
             return False
 
@@ -84,7 +84,7 @@ class Solver:
             return True
         return False
 
-    def open_if_number_equals_markers(self, x, y, num) -> bool:
+    def open_if_number_equals_markers(self, x, y, num, _) -> bool:
         if num < 1:
             return False
 
@@ -97,7 +97,7 @@ class Solver:
             return True
         return False
 
-    def open_if_contacted_with_enough_markers(self, x, y, num) -> bool:
+    def open_if_contacted_with_enough_markers(self, x, y, num, _) -> bool:
         if num < 1:
             return False
 
@@ -141,7 +141,7 @@ class Solver:
 
         return False
 
-    def mark_if_there_is_only_one_option(self, x, y, num) -> bool:
+    def mark_if_there_is_only_one_option(self, x, y, num, _) -> bool:
         result = False
         if num < 1:
             return result
@@ -178,27 +178,55 @@ class Solver:
 
         return result
 
+    def mark_last_mines(self, x, y, num, _) -> bool:
+        if self.game.num_unknowns == self.game.num_mines:
+            if num == Field.UNKNOWN:
+                self.game.mark(x, y)
+                return True
+
+    def try_to_risk(self, x, y, num, chances) -> bool:
+        unknown_neighbors = get_unknown_neighbors(self.game.field, x, y)
+        unknown_neighbors_count = len(unknown_neighbors)
+        for nx, ny in unknown_neighbors:
+            if num < 1:
+                chances[(nx,ny)] = None
+                continue
+
+            marked_neighbors_count = len(get_marked_neighbors(self.game.field, nx, ny))
+            chance = 1 - ((num - marked_neighbors_count) / unknown_neighbors_count)
+            curr_chance = chances.get((nx, ny))
+            chances[(nx,ny)] = min(1 if curr_chance is None else curr_chance, chance)
+
+        if len(chances) == self.game.num_unknowns:
+            _, point = max(((0 if chance is None else chance, point) for (point, chance) in chances.items()))
+            self.game.open(*point)
+            return True
+
     def solve(self):
         alive = True
-        while alive and not self.game.check_done():
+        while alive:
+            if self.game.check_done():
+                self.game.print()
+                print('SOLVED!')
+                exit(0)
+
             alive = False
-            methods =[
+            methods = [
                 self.mark_if_number_equals_unknowns,
                 self.open_if_number_equals_markers,
                 self.mark_if_there_is_only_one_option,
-                self.open_if_contacted_with_enough_markers
+                self.open_if_contacted_with_enough_markers,
+                self.mark_last_mines
             ]
             for func in methods:
                 if self.game.field.traverse(func):
+                    self.game.print()
                     alive = True
                     break
+
             if alive:
                 continue
 
-        self.game.field.print()
-        if self.game.check_done():
-            print('SOLVED!')
-            exit(0)
-
-        print('F@CK(')
-        exit(1)
+            print('I will take risks!')
+            alive = self.game.field.traverse(self.try_to_risk)
+            self.game.print()
